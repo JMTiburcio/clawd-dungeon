@@ -24,10 +24,10 @@ class DungeonEnvironment:
         +5    level up
     """
 
-    REWARD_WIN = 100
-    REWARD_DEATH = -50
+    REWARD_WIN = 0
+    REWARD_DEATH = -75
     REWARD_TURN = -1
-    REWARD_LEVEL_UP = 5
+    REWARD_LEVEL_UP = 15
 
     def __init__(self, config: GameConfig = None):
         self.config = config or DEFAULT_CONFIG
@@ -37,6 +37,8 @@ class DungeonEnvironment:
         self._state: dict[str, int] = {}
         self._xp: int = 0
         self._turn: int = 0
+        self._proficiency: dict[str, int] = {}  # enemy_name → proficiency level (capped at prof_max)
+        self._kill_count: dict[str, int] = {}   # enemy_name → total kills this episode
         self.reset()
 
     # ------------------------------------------------------------------
@@ -46,6 +48,8 @@ class DungeonEnvironment:
     def reset(self) -> dict[str, int]:
         """Resets the episode. Returns the initial state."""
         cfg = self.config
+        self._proficiency = {z.enemy["name"]: 0 for z in cfg.zones}
+        self._kill_count  = {z.enemy["name"]: 0 for z in cfg.zones}
         self._state = {
             "player_hp": cfg.base_hp,
             "player_max_hp": cfg.base_hp,
@@ -55,6 +59,7 @@ class DungeonEnvironment:
             "player_xp_required": cfg.xp_required(1),
             "boss_hp": cfg.boss_hp,
             "boss_atk": cfg.boss_atk,
+            **{f"prof_{name.lower()}": 0 for name in self._proficiency},
         }
         self._xp = 0
         self._turn = 0
@@ -90,6 +95,7 @@ class DungeonEnvironment:
         if max_turns > 0 and self._turn >= max_turns and not done:
             done = True
             info["timeout"] = True
+            reward += self._state["player_atk"] * 2
 
         return dict(self._state), reward, done, info
 
@@ -103,20 +109,27 @@ class DungeonEnvironment:
 
     def _farm(self, zone_idx: int, info: dict) -> float:
         """Battles the zone's fixed enemy. Returns extra reward."""
-        zone = self.config.zones[zone_idx]
-        player_atk = self._state["player_atk"]
+        cfg = self.config
+        zone = cfg.zones[zone_idx]
+        enemy_name = zone.enemy["name"]
+        prof = self._proficiency[enemy_name]
+
+        effective_atk = int(self._state["player_atk"] * (1 + cfg.prof_pct * prof)) + cfg.prof_flat * prof
+        effective_enemy_atk = max(1, int(zone.enemy["atk"] * (1 - cfg.prof_pct * prof)) - cfg.prof_flat * prof)
+
         enemy_hp = zone.enemy["hp"]
-        enemy_atk = zone.enemy["atk"]
         player_hp = self._state["player_hp"]
 
         info["zone"] = zone.name
         info["enemy"] = zone.enemy
+        info["prof_level"] = prof
+        info["prof_gained"] = False
 
         while player_hp > 0 and enemy_hp > 0:
-            enemy_hp -= player_atk
+            enemy_hp -= effective_atk
             if enemy_hp <= 0:
                 break
-            player_hp -= enemy_atk
+            player_hp -= effective_enemy_atk
 
         self._state["player_hp"] = max(0, player_hp)
 
@@ -124,6 +137,14 @@ class DungeonEnvironment:
             info["died"] = True
             info["boss_battle"] = False
             return self.REWARD_DEATH
+
+        self._kill_count[enemy_name] += 1
+        new_prof = min(cfg.prof_max, self._kill_count[enemy_name] // cfg.prof_kills_per_level)
+        if new_prof > prof:
+            self._proficiency[enemy_name] = new_prof
+            self._state[f"prof_{enemy_name.lower()}"] = new_prof
+            info["prof_gained"] = True
+            info["prof_level"] = new_prof
 
         self._xp += zone.xp
         info["xp_gained"] = zone.xp
@@ -186,4 +207,5 @@ class DungeonEnvironment:
     def state_as_tuple(self) -> tuple:
         """Converts state to a hashable tuple — useful for the Q-table."""
         s = self._state
-        return (s["player_hp"], s["player_max_hp"], s["player_atk"], s["player_level"])
+        prof_vals = tuple(v for k, v in sorted(s.items()) if k.startswith("prof_"))
+        return (s["player_hp"], s["player_max_hp"], s["player_atk"], s["player_level"]) + prof_vals

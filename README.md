@@ -81,10 +81,10 @@ state = {
 
 | Event | Reward |
 |-------|--------|
-| Defeat the Boss | +100 |
-| Die (any battle) | -50 |
+| Survive the turn limit | `+player_atk × 2` |
+| Level up | +15 |
 | Each turn spent | -1 |
-| Level up | +5 |
+| Die (hardcore — no respawn) | -75 |
 
 ---
 

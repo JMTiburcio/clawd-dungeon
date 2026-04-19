@@ -22,12 +22,19 @@ TARGET_WIN_RATE = 0.50
 MAX_TURNS       = 50
 
 
-def _make_config(forest_xp, cave_xp, tower_xp, boss_hp, boss_atk, xp_scale=1.0, max_turns=MAX_TURNS) -> GameConfig:
+def _make_config(
+    forest_xp, cave_xp, tower_xp, boss_hp, boss_atk,
+    xp_scale=1.0, max_turns=MAX_TURNS,
+    prof_pct=0.0, prof_flat=0, prof_kpl=1,
+) -> GameConfig:
     cfg = GameConfig(
         max_turns=max_turns,
         boss_hp=boss_hp,
         boss_atk=boss_atk,
         xp_scale=xp_scale,
+        prof_pct=prof_pct,
+        prof_flat=prof_flat,
+        prof_kills_per_level=prof_kpl,
     )
     cfg.zones = copy.deepcopy(cfg.zones)
     cfg.zones[0].xp = forest_xp
@@ -63,36 +70,36 @@ def xp_curve_preview(config: GameConfig, levels: int = 4) -> str:
 
 
 def run_sweep():
-    # (label, forest_xp, cave_xp, tower_xp, boss_hp, boss_atk, xp_scale)
-    # (label, forest_xp, cave_xp, tower_xp, boss_hp, boss_atk, xp_scale, max_turns)
+    # (label, f_xp, c_xp, t_xp, boss_hp, boss_atk, xp_scale, max_turns, prof_pct, prof_flat, prof_kpl)
     variants = [
-        # ── 1.3x cliff: does more turns smooth it out? ─────────────────
-        ("1.3x  | 78/18  t=50",   3, 6, 12,  78, 18, 1.3,  50),
-        ("1.3x  | 85/19  t=50",   3, 6, 12,  85, 19, 1.3,  50),
-        ("1.3x  | 78/18  t=75",   3, 6, 12,  78, 18, 1.3,  75),
-        ("1.3x  | 85/19  t=75",   3, 6, 12,  85, 19, 1.3,  75),
-        ("1.3x  | 95/21  t=75",   3, 6, 12,  95, 21, 1.3,  75),
-        ("1.3x  | 78/18  t=100",  3, 6, 12,  78, 18, 1.3, 100),
-        ("1.3x  | 85/19  t=100",  3, 6, 12,  85, 19, 1.3, 100),
-        ("1.3x  | 95/21  t=100",  3, 6, 12,  95, 21, 1.3, 100),
-        ("1.3x  | 110/24 t=100",  3, 6, 12, 110, 24, 1.3, 100),
-        # ── 1.5x + fast XP: more turns to reach target ─────────────────
-        ("1.5x  | 78/18  t=50  fast",  5, 10, 18,  78, 18, 1.5,  50),
-        ("1.5x  | 85/19  t=50  fast",  5, 10, 18,  85, 19, 1.5,  50),
-        ("1.5x  | 78/18  t=75  fast",  5, 10, 18,  78, 18, 1.5,  75),
-        ("1.5x  | 85/19  t=75  fast",  5, 10, 18,  85, 19, 1.5,  75),
-        ("1.5x  | 95/21  t=75  fast",  5, 10, 18,  95, 21, 1.5,  75),
-        ("1.5x  | 110/24 t=75  fast",  5, 10, 18, 110, 24, 1.5,  75),
-        ("1.5x  | 110/24 t=100 fast",  5, 10, 18, 110, 24, 1.5, 100),
+        # ── kpl=1: instant proficiency (1 kill per level) ───────────────
+        ("kpl=1 | 0.08/1 1.3x 85/19 t=75",   3, 6, 12, 85, 19, 1.3,  75, 0.08, 1, 1),
+        ("kpl=1 | 0.08/1 1.3x 95/21 t=75",   3, 6, 12, 95, 21, 1.3,  75, 0.08, 1, 1),
+        ("kpl=1 | 0.08/1 1.3x 95/21 t=100",  3, 6, 12, 95, 21, 1.3, 100, 0.08, 1, 1),
+        # ── kpl=3: 3 kills per proficiency level ────────────────────────
+        ("kpl=3 | 0.08/1 1.3x 85/19 t=75",   3, 6, 12, 85, 19, 1.3,  75, 0.08, 1, 3),
+        ("kpl=3 | 0.08/1 1.3x 95/21 t=75",   3, 6, 12, 95, 21, 1.3,  75, 0.08, 1, 3),
+        ("kpl=3 | 0.08/1 1.3x 95/21 t=100",  3, 6, 12, 95, 21, 1.3, 100, 0.08, 1, 3),
+        ("kpl=3 | 0.12/2 1.3x 95/21 t=100",  3, 6, 12, 95, 21, 1.3, 100, 0.12, 2, 3),
+        # ── kpl=5: 5 kills per proficiency level ────────────────────────
+        ("kpl=5 | 0.08/1 1.3x 85/19 t=75",   3, 6, 12, 85, 19, 1.3,  75, 0.08, 1, 5),
+        ("kpl=5 | 0.08/1 1.3x 95/21 t=75",   3, 6, 12, 95, 21, 1.3,  75, 0.08, 1, 5),
+        ("kpl=5 | 0.08/1 1.3x 95/21 t=100",  3, 6, 12, 95, 21, 1.3, 100, 0.08, 1, 5),
+        ("kpl=5 | 0.12/2 1.3x 95/21 t=100",  3, 6, 12, 95, 21, 1.3, 100, 0.12, 2, 5),
+        # ── kpl=10: slow proficiency (10 kills per level) ───────────────
+        ("kpl=10 | 0.08/1 1.3x 85/19 t=75",  3, 6, 12, 85, 19, 1.3,  75, 0.08, 1, 10),
+        ("kpl=10 | 0.12/2 1.3x 85/19 t=100", 3, 6, 12, 85, 19, 1.3, 100, 0.12, 2, 10),
+        ("kpl=10 | 0.12/2 1.3x 95/21 t=100", 3, 6, 12, 95, 21, 1.3, 100, 0.12, 2, 10),
     ]
 
     zone_names = ["Forest", "Cave", "Tower"]
-    col_w = 24; bs_w = 7; sc_w = 5; cv_w = 16; mt_w = 7; wr_w = 9; act_w = 8
+    col_w = 30; bs_w = 7; sc_w = 5; cv_w = 16; mt_w = 7; kl_w = 5; pf_w = 9; wr_w = 9; act_w = 8
 
     header = "  ".join([
         f"{'Scenario':<{col_w}}",
         f"{'BossHP':>{bs_w}}", f"{'ATK':>{bs_w}}", f"{'Scale':>{sc_w}}",
         f"{'XP/lvl 1-4':>{cv_w}}", f"{'Turns':>{mt_w}}",
+        f"{'kpl':>{kl_w}}", f"{'p%/flat':>{pf_w}}",
         f"{'WinRate':>{wr_w}}",
         *[f"{n:>{act_w}}" for n in zone_names],
         f"{'Heal':>{act_w}}", f"{'Boss%':>{act_w}}",
@@ -104,40 +111,37 @@ def run_sweep():
     print(sep)
 
     results = []
-    prev_scale = None
+    prev_kpl = None
 
-    for label, f_xp, c_xp, t_xp, boss_hp, boss_atk, xp_scale, max_turns in variants:
-        if prev_scale is not None and xp_scale != prev_scale:
+    for label, f_xp, c_xp, t_xp, boss_hp, boss_atk, xp_scale, max_turns, p_pct, p_flat, p_kpl in variants:
+        if prev_kpl is not None and p_kpl != prev_kpl:
             print("-" * len(header))
-        prev_scale = xp_scale
+        prev_kpl = p_kpl
 
-        config = _make_config(f_xp, c_xp, t_xp, boss_hp, boss_atk, xp_scale, max_turns)
+        config = _make_config(f_xp, c_xp, t_xp, boss_hp, boss_atk, xp_scale, max_turns, p_pct, p_flat, p_kpl)
         agent  = QLearningAgent()
         agent.train(episodes=TRAIN_EPISODES, env=DungeonEnvironment(config))
         win_rate, usage = evaluate(agent, config, EVAL_EPISODES)
 
         curve = xp_curve_preview(config)
+        prof_col = f"{p_pct:.2f}/{p_flat}"
 
         row = "  ".join([
             f"{label:<{col_w}}",
             f"{boss_hp:>{bs_w}}", f"{boss_atk:>{bs_w}}", f"{xp_scale:>{sc_w}.1f}",
             f"{curve:>{cv_w}}", f"{max_turns:>{mt_w}}",
+            f"{p_kpl:>{kl_w}}", f"{prof_col:>{pf_w}}",
             f"{win_rate:>{wr_w}.0%}",
             *[f"{usage.get(a, 0):>{act_w}.0%}" for a in range(5)],
         ])
         print(row)
-        results.append((label, win_rate, boss_hp, boss_atk, xp_scale))
+        results.append((label, win_rate, boss_hp, boss_atk, xp_scale, p_pct, p_flat, p_kpl))
 
     print(sep)
-    best = min(results, key=lambda x: abs(x[1] - TARGET_WIN_RATE))
-    print(
-        f"\nClosest to {TARGET_WIN_RATE:.0%} target: '{best[0]}' "
-        f"— boss HP={best[2]} ATK={best[3]} xp_scale={best[4]} ({best[1]:.0%})\n"
-    )
-    print("Zone usage guide:")
-    print("  Forest dominates    → leveling too easy, raise scale or boss difficulty")
-    print("  Cave/Tower at 0%    → XP reward not worth the risk at this difficulty")
-    print("  All zones > 5%      → agent making real trade-off decisions  ← target")
+    print("\nZone usage guide:")
+    print("  Forest dominates    → proficiency too fast or leveling too easy")
+    print("  Tower only          → Tower XP + proficiency compounds faster than diversifying")
+    print("  All zones > 5%      → agent diversifying across enemy types  ← target")
 
 
 if __name__ == "__main__":

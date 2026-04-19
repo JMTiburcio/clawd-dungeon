@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 class ZoneConfig:
     name: str
     xp: int              # fixed XP awarded per victory
-    enemy: dict          # single enemy: {"hp": int, "atk": int}
+    enemy: dict          # single enemy: {"name": str, "hp": int, "atk": int}
 
 
 @dataclass
@@ -40,15 +40,24 @@ class GameConfig:
     # Maximum turns per episode; 0 = unlimited
     max_turns: int = 50
 
+    # Proficiency: grows with each kill of a given enemy type
+    # Applied symmetrically to both offence and defence:
+    #   effective_atk        = player_atk * (1 + prof_pct * prof) + prof_flat * prof
+    #   effective_enemy_atk  = max(1, enemy_atk * (1 - prof_pct * prof) - prof_flat * prof)
+    prof_pct: float = 0.05   # fractional bonus/reduction per proficiency level
+    prof_flat: int = 1        # flat bonus/reduction per proficiency level
+    prof_max: int = 5         # proficiency cap
+    prof_kills_per_level: int = 1  # kills of the same enemy needed per proficiency level
+
     def xp_required(self, level: int) -> int:
         """XP needed to advance from `level` to `level + 1`."""
         return max(1, int(self.xp_base * (self.xp_scale ** (level - 1))))
 
     # Farm zones (order defines action indices 0..N-1)
     zones: list[ZoneConfig] = field(default_factory=lambda: [
-        ZoneConfig(name="Forest", xp=3,  enemy={"hp": 15, "atk": 4}),
-        ZoneConfig(name="Cave",   xp=6,  enemy={"hp": 28, "atk": 7}),
-        ZoneConfig(name="Tower",  xp=12, enemy={"hp": 44, "atk": 11}),
+        ZoneConfig(name="Forest", xp=3,  enemy={"name": "Goblin", "hp": 15, "atk": 4}),
+        ZoneConfig(name="Cave",   xp=6,  enemy={"name": "Orc",    "hp": 28, "atk": 7}),
+        ZoneConfig(name="Tower",  xp=12, enemy={"name": "Troll",  "hp": 44, "atk": 11}),
     ])
 
 

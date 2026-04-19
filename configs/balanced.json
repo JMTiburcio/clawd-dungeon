@@ -1,6 +1,9 @@
 {
-  "boss_hp": 95,
-  "boss_atk": 21,
+  "boss_hp": 85,
+  "boss_atk": 19,
   "xp_scale": 1.3,
-  "max_turns": 0
+  "max_turns": 0,
+  "prof_pct": 0.08,
+  "prof_flat": 1,
+  "prof_kills_per_level": 3
 }

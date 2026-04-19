@@ -38,10 +38,15 @@ def render_state(state: dict[str, int]):
     xp_filled = int(20 * xp / xp_req)
     xp_bar = "[" + "*" * xp_filled + "." * (20 - xp_filled) + "]"
 
+    prof_entries = sorted((k[5:].capitalize(), v) for k, v in state.items() if k.startswith("prof_"))
+    prof_str = "  ".join(f"{name}: {'#' * v}{'.' * (5 - v)} {v}/5" for name, v in prof_entries)
+
     print("\n" + "-" * 50)
     print(f"  Level {level}   HP: {hp_bar} {hp}/{max_hp}   ATK: {atk}")
     print(f"           XP: {xp_bar} {xp}/{xp_req}")
     print(f"  Boss --- HP: {boss_hp}  ATK: {boss_atk}")
+    if prof_entries:
+        print(f"  Prof:  {prof_str}")
     print("-" * 50)
 
 
@@ -73,6 +78,8 @@ def narrate(info: dict[str, Any], state: dict[str, int]):
             hp = state["player_hp"]
             max_hp = state["player_max_hp"]
             msg = f"\n[win] [{zone}] You won and gained {xp} XP! HP remaining: {hp}/{max_hp}."
+            if info.get("prof_gained"):
+                msg += f"\n[proficiency] {zone} mastery increased to {info['prof_level']}/5!"
             if info.get("leveled_up"):
                 msg += f"\n[level up] You reached level {info['new_level']}! Stats increased!"
             print(msg)

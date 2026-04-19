@@ -149,12 +149,10 @@ class QLearningAgent:
         """
         Converts the continuous state dict into a discrete Q-table key.
         HP is bucketed (0–3) to keep the state space manageable.
+        Proficiency values are included as-is (already discrete 0..prof_max).
         """
         hp = state["player_hp"]
         max_hp = state["player_max_hp"]
         hp_bucket = min(3, int(4 * hp / max_hp))  # 0=critical, 3=full
-        return (
-            hp_bucket,
-            state["player_atk"],
-            state["player_level"],
-        )
+        prof_vals = tuple(v for k, v in sorted(state.items()) if k.startswith("prof_"))
+        return (hp_bucket, state["player_atk"], state["player_level"]) + prof_vals
