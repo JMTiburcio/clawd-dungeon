@@ -37,6 +37,7 @@ class GymEnvironment:
         self._boss_action = len(self.config.zones) + 1
         self._state: dict[str, int] = {}
         self._xp: int = 0
+        self._turn: int = 0
         self.reset()
 
     # ------------------------------------------------------------------
@@ -55,6 +56,7 @@ class GymEnvironment:
             "boss_atk": cfg.boss_atk,
         }
         self._xp = 0
+        self._turn = 0
         return dict(self._state)
 
     def step(self, action: int) -> tuple[dict[str, int], float, bool, dict[str, Any]]:
@@ -64,9 +66,10 @@ class GymEnvironment:
         """
         assert 0 <= action < self.N_ACTIONS, f"Invalid action: {action}"
 
+        self._turn += 1
         reward = self.REWARD_TURN
         done = False
-        info: dict[str, Any] = {"action": action, "leveled_up": False, "won": False, "died": False}
+        info: dict[str, Any] = {"action": action, "leveled_up": False, "won": False, "died": False, "timeout": False}
 
         if action < self._heal_action:
             reward += self._farm(action, info)
@@ -81,6 +84,11 @@ class GymEnvironment:
 
         if info["died"] and not info.get("boss_battle"):
             done = True
+
+        max_turns = self.config.max_turns
+        if max_turns > 0 and self._turn >= max_turns and not done:
+            done = True
+            info["timeout"] = True
 
         return dict(self._state), reward, done, info
 

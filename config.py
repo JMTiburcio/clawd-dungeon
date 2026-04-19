@@ -32,6 +32,9 @@ class GameConfig:
     # XP required to level up
     xp_to_level: int = 10
 
+    # Maximum turns per episode; 0 = unlimited
+    max_turns: int = 50
+
     # Farm zones (order defines action indices 0..N-1)
     zones: list[ZoneConfig] = field(default_factory=lambda: [
         ZoneConfig(
