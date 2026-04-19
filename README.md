@@ -1,8 +1,8 @@
 # clawd-dungeon
 
-A classic turn-based dungeon RPG environment for training and balancing an RL agent.
+A classic turn-based dungeon RPG — playable on Android and scriptable for RL training and balance testing.
 
-The core idea: train a Q-Learning agent to defeat the Boss as fast as possible, learning the optimal trade-off between farming zones, healing, and challenging the Boss. The same environment doubles as a **balance testing tool** — sweeping configs exposes which features the agent actually uses.
+The core idea: train a Q-Learning agent to build the strongest character possible within a turn limit, learning the optimal trade-off between farming zones, healing, and proficiency. The same environment doubles as a **balance testing tool** — sweeping configs exposes which features the agent actually uses.
 
 ---
 
@@ -11,137 +11,133 @@ The core idea: train a Q-Learning agent to defeat the Boss as fast as possible, 
 ```
 ┌─────────────────────────────────┐
 │         DungeonEnvironment      │  ← game core, no I/O
-│  reset() / step() / render()    │  ← standard environment interface
-└────────────┬────────────────────┘
-             │  GameConfig
-     ┌───────┴────────┐
-     │                │
-┌────▼─────┐    ┌─────▼──────┐
-│ HumanCLI │    │  RLAgent   │
-│  play.py │    │  agent.py  │
-└──────────┘    └────────────┘
+│  reset() / step()               │  ← standard environment interface
+└──────────────┬──────────────────┘
+               │  GameConfig
+     ┌─────────┼──────────┐
+     │         │          │
+┌────▼───┐ ┌───▼────┐ ┌───▼──────┐
+│  app/  │ │  cli/  │ │  core/   │
+│Android │ │ train  │ │  shared  │
+│   UI   │ │ watch  │ │  logic   │
+│        │ │balance │ │          │
+└────────┘ └────────┘ └──────────┘
 ```
 
-All game parameters live in `GameConfig` (`config.py`). The environment has no hardcoded values — swap a config to test a different balance scenario without touching logic.
+All game parameters live in `GameConfig` (`core/`). The environment has no hardcoded values — change a config field to test a different balance scenario without touching logic.
+
+---
+
+## Modules
+
+```
+core/   game logic — GameConfig, DungeonEnvironment, QLearningAgent
+app/    Android UI for human play
+cli/    CLI tools: train, watch, balance sweep
+```
 
 ---
 
 ## Quickstart
 
+### Android app
+Open the project in Android Studio and run the `app` module on a device or emulator.
+
+### CLI tools
 ```bash
-# play as human (default config)
-python3 play.py
-
-# play with a custom config
-python3 play.py --config configs/balanced.json
-
-# train the RL agent
-python3 train.py
-
-# train and watch snapshots during training
-python3 train.py --watch
+# train the RL agent (saves model.bin)
+./gradlew :cli:run --args="train"
 
 # watch the trained agent play
-python3 watch.py
+./gradlew :cli:run --args="watch"
 
 # run the balance sweep
-python3 balance.py
+./gradlew :cli:run --args="balance"
 ```
 
 ---
 
 ## Actions
 
-| Key | Action | Notes |
-|-----|--------|-------|
-| `0` | Farm — Forest | Easy enemy, low XP, low risk |
-| `1` | Farm — Cave | Medium enemy, moderate XP, medium risk |
-| `2` | Farm — Tower | Hard enemy, high XP, high risk |
-| `3` | Heal | Restores HP to max, costs 1 turn |
-| `4` | Challenge Boss | Final battle |
+| Action | Description | Notes |
+|--------|-------------|-------|
+| Farm — Forest | Fight a Goblin | Easy, low XP, low risk |
+| Farm — Cave | Fight an Orc | Medium XP, medium risk |
+| Farm — Tower | Fight a Troll | High XP, high risk |
+| Heal | Restore HP to max | Costs 1 turn |
+| Challenge Boss | Final battle | |
 
 ---
 
 ## State
 
-```python
-state = {
-    "player_hp":          int,  # current HP
-    "player_max_hp":      int,  # grows on level-up
-    "player_atk":         int,  # grows on level-up
-    "player_level":       int,
-    "player_xp":          int,  # XP toward next level
-    "player_xp_required": int,  # XP needed for next level-up
-    "boss_hp":            int,  # fixed
-    "boss_atk":           int,  # fixed
-}
+```kotlin
+data class GameState(
+    val playerHp: Int,          // current HP
+    val playerMaxHp: Int,       // grows on level-up
+    val playerAtk: Int,         // grows on level-up
+    val playerLevel: Int,
+    val playerXp: Int,          // XP toward next level
+    val playerXpRequired: Int,  // XP needed for next level-up
+    val bossHp: Int,
+    val bossAtk: Int,
+    val proficiency: Map<String, Int>,  // enemyName → proficiency level (0..profMax)
+)
 ```
+
+---
 
 ## Rewards
 
 | Event | Reward |
 |-------|--------|
-| Survive the turn limit | `+player_atk × 2` |
+| Survive the turn limit | `+playerAtk × 2` |
 | Level up | +15 |
 | Each turn spent | -1 |
 | Die (hardcore — no respawn) | -75 |
 
 ---
 
-## Configuration
+## Proficiency
 
-All parameters are in `GameConfig` and can be overridden via a JSON file:
+Each enemy type (Goblin, Orc, Troll) has an independent proficiency level that grows with kills, capped at `profMax`. Every `profKillsPerLevel` kills advances proficiency by 1.
 
-```json
-{
-  "boss_hp": 95,
-  "boss_atk": 21,
-  "xp_scale": 1.3,
-  "max_turns": 0
-}
+Combat bonuses per proficiency level:
+```
+effectiveAtk       = playerAtk × (1 + profPct × prof) + profFlat × prof
+effectiveEnemyAtk  = max(1, enemyAtk × (1 − profPct × prof) − profFlat × prof)
 ```
 
-Pass only the fields you want to change — everything else uses the default. `max_turns: 0` means unlimited.
+**Balanced config** (`kpl=3, profPct=0.08, profFlat=1, xp_scale=1.3, boss=85/19, t=75`):
+```
+Forest 27%  Cave 25%  Tower 25%  Heal 20%  — all zones viable
+```
 
-**Key parameters:**
+---
+
+## Key Config Parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `boss_hp` | 78 | Boss health points |
-| `boss_atk` | 18 | Boss attack damage |
-| `xp_base` | 10 | XP required for level 1→2 |
-| `xp_scale` | 1.0 | XP multiplier per level (`1.3` = mild curve forcing Cave/Tower at high levels) |
-| `max_turns` | 50 | Turn limit per episode; `0` = unlimited |
-
-Preset configs live in `configs/`.
+| `bossHp` | 85 | Boss health points |
+| `bossAtk` | 19 | Boss attack damage |
+| `xpBase` | 10 | XP required for level 1→2 |
+| `xpScale` | 1.3 | XP multiplier per level |
+| `maxTurns` | 0 | Turn limit per episode; `0` = unlimited |
+| `profPct` | 0.08 | Fractional ATK/DEF bonus per proficiency level |
+| `profFlat` | 1 | Flat ATK/DEF bonus per proficiency level |
+| `profMax` | 5 | Proficiency cap |
+| `profKillsPerLevel` | 3 | Kills needed to advance one proficiency level |
 
 ---
 
 ## Balance Testing
 
-`balance.py` trains a fresh agent for each config variant and reports win rate + action usage breakdown. An unused zone signals either a redundant feature or a balance problem.
+`./gradlew :cli:run --args="balance"` trains a fresh agent for each config variant and reports win rate + action usage breakdown. An unused zone signals either a redundant feature or a balance problem.
 
 ```
 Zone usage guide:
-  Forest dominates    → leveling too easy, raise xp_scale or boss difficulty
-  Cave/Tower at 0%    → not worth the risk at this difficulty
-  All zones > 5%      → agent making real trade-off decisions  ← target
-```
-
-Key finding: `xp_scale=1.3` with a scaled boss makes all three zones viable — early levels favor Forest, late levels require Cave/Tower to progress within the turn limit.
-
----
-
-## Files
-
-```
-environment.py   game core (no I/O)
-config.py        GameConfig dataclass + load_config()
-agent.py         Q-Learning agent (act / train / save / load)
-cli.py           terminal UI and watch mode
-play.py          human play entry point
-train.py         agent training entry point
-watch.py         watch trained agent entry point
-balance.py       balance sweep tool
-configs/         JSON config presets
+  Forest dominates → proficiency too fast or leveling too easy
+  Tower only       → Tower XP + proficiency compounds faster than diversifying
+  All zones > 5%   → agent diversifying across enemy types  ← target
 ```
