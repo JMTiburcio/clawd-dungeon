@@ -129,8 +129,9 @@ class GymEnvironment:
         self._xp += xp_gained
         info["xp_gained"] = xp_gained
 
-        if self._xp >= self.config.xp_to_level:
-            self._xp -= self.config.xp_to_level
+        xp_needed = self.config.xp_required(self._state["player_level"])
+        if self._xp >= xp_needed:
+            self._xp -= xp_needed
             self._level_up(info)
 
         return 0.0

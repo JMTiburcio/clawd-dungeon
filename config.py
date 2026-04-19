@@ -29,11 +29,19 @@ class GameConfig:
     level_hp_gain: int = 8
     level_atk_gain: int = 2
 
-    # XP required to level up
-    xp_to_level: int = 10
+    # XP required for the first level-up (level 1 → 2)
+    xp_base: int = 10
+
+    # Multiplier applied per level: xp_required(n) = xp_base * xp_scale^(n-1)
+    # 1.0 = flat (original behavior), 1.5 = steep curve forcing Tower at high levels
+    xp_scale: float = 1.0
 
     # Maximum turns per episode; 0 = unlimited
     max_turns: int = 50
+
+    def xp_required(self, level: int) -> int:
+        """XP needed to advance from `level` to `level + 1`."""
+        return max(1, int(self.xp_base * (self.xp_scale ** (level - 1))))
 
     # Farm zones (order defines action indices 0..N-1)
     zones: list[ZoneConfig] = field(default_factory=lambda: [
