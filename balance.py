@@ -14,7 +14,7 @@ from collections import defaultdict
 
 from agent import QLearningAgent
 from config import GameConfig
-from environment import GymEnvironment
+from environment import DungeonEnvironment
 
 TRAIN_EPISODES  = 3000
 EVAL_EPISODES   = 300
@@ -42,7 +42,7 @@ def evaluate(agent: QLearningAgent, config: GameConfig, episodes: int) -> tuple[
     total_actions = 0
 
     for _ in range(episodes):
-        env = GymEnvironment(config)
+        env = DungeonEnvironment(config)
         state = env.reset()
         done = False
         while not done:
@@ -113,7 +113,7 @@ def run_sweep():
 
         config = _make_config(f_xp, c_xp, t_xp, boss_hp, boss_atk, xp_scale, max_turns)
         agent  = QLearningAgent()
-        agent.train(episodes=TRAIN_EPISODES, env=GymEnvironment(config))
+        agent.train(episodes=TRAIN_EPISODES, env=DungeonEnvironment(config))
         win_rate, usage = evaluate(agent, config, EVAL_EPISODES)
 
         curve = xp_curve_preview(config)

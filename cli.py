@@ -1,12 +1,12 @@
 """
 HumanCLI — terminal interface for playing or watching the agent.
-All game I/O lives here; GymEnvironment has none.
+All game I/O lives here; DungeonEnvironment has none.
 """
 
 import time
 from typing import Any
 
-from environment import GymEnvironment
+from environment import DungeonEnvironment
 
 ACTION_LABELS = {
     0: "Forest  (easy   | low XP, low risk)",
@@ -95,13 +95,13 @@ def narrate(info: dict[str, Any], state: dict[str, int]):
 
 def play_human(config=None):
     """Main loop for a human player."""
-    env = GymEnvironment(config)
+    env = DungeonEnvironment(config)
     state = env.reset()
     total_reward = 0.0
     turns = 0
 
     print("\n" + "=" * 50)
-    print("       WELCOME TO CLAWD DUNGEON GYM!")
+    print("        WELCOME TO CLAWD DUNGEON!")
     print("=" * 50)
     print("Defeat the Boss as fast as possible.")
     print("Each turn costs -1. Death = -50. Victory = +100.")
@@ -137,7 +137,7 @@ def play_human(config=None):
 
 def watch_agent(agent, delay: float = 0.8, episodes: int = 1):
     """Displays the agent playing in real time with a configurable delay."""
-    env = GymEnvironment()
+    env = DungeonEnvironment()
 
     for ep in range(episodes):
         state = env.reset()

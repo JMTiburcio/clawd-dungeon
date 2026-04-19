@@ -1,6 +1,6 @@
 """
-GymEnvironment — game core, no I/O.
-Standard gymnasium interface: reset() / step() / render()
+DungeonEnvironment — game core, no I/O.
+Standard environment interface: reset() / step() / render()
 """
 
 from typing import Any
@@ -8,7 +8,7 @@ from typing import Any
 from config import GameConfig, DEFAULT_CONFIG
 
 
-class GymEnvironment:
+class DungeonEnvironment:
     """
     Classic turn-based dungeon RPG environment for RL.
 
@@ -40,7 +40,7 @@ class GymEnvironment:
         self.reset()
 
     # ------------------------------------------------------------------
-    # Gymnasium interface
+    # Environment interface
     # ------------------------------------------------------------------
 
     def reset(self) -> dict[str, int]:

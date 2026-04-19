@@ -8,7 +8,7 @@ import random
 from collections import defaultdict
 from typing import Any
 
-from environment import GymEnvironment
+from environment import DungeonEnvironment
 
 
 class QLearningAgent:
@@ -79,10 +79,10 @@ class QLearningAgent:
         """
         Trains for N episodes. Returns list of total rewards per episode.
         callback(episode, total_reward, info) — optional, for external logging.
-        env — optional GymEnvironment instance; creates a default one if not provided.
+        env — optional DungeonEnvironment instance; creates a default one if not provided.
         """
         if env is None:
-            env = GymEnvironment()
+            env = DungeonEnvironment()
         rewards_history = []
 
         for ep in range(episodes):

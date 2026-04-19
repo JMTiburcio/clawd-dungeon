@@ -2,7 +2,7 @@
 GameConfig — all tunable game parameters in one place.
 
 Create a GameConfig variant to test different balance scenarios without
-touching the environment logic. Pass it to GymEnvironment(config=...).
+touching the environment logic. Pass it to DungeonEnvironment(config=...).
 """
 
 import json

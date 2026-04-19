@@ -10,8 +10,8 @@ The core idea: train a Q-Learning agent to defeat the Boss as fast as possible, 
 
 ```
 ┌─────────────────────────────────┐
-│         GymEnvironment          │  ← game core, no I/O
-│  reset() / step() / render()    │  ← standard gymnasium interface
+│         DungeonEnvironment      │  ← game core, no I/O
+│  reset() / step() / render()    │  ← standard environment interface
 └────────────┬────────────────────┘
              │  GameConfig
      ┌───────┴────────┐
