@@ -5,7 +5,6 @@ xp_scale controls how much harder each level-up becomes:
   1.0 = flat (original)        level 4→5 costs same as 1→2
   1.3 = mild curve             level 4→5 costs ~2x level 1→2
   1.5 = steep curve            level 4→5 costs ~3x level 1→2
-  2.0 = exponential            level 4→5 costs 8x level 1→2
 
 Goal: find configs where win rate ≈ 50% AND all zones are used.
 """
@@ -58,41 +57,42 @@ def evaluate(agent: QLearningAgent, config: GameConfig, episodes: int) -> tuple[
     return wins / episodes, usage
 
 
-def xp_curve_preview(config: GameConfig, levels: int = 5) -> str:
-    """Shows XP required per level-up for quick reference."""
-    return " → ".join(str(config.xp_required(l)) for l in range(1, levels + 1))
+def xp_curve_preview(config: GameConfig, levels: int = 4) -> str:
+    """Short XP curve string (4 levels keeps it within column width)."""
+    return " ".join(f"{config.xp_required(l):>3}" for l in range(1, levels + 1))
 
 
 def run_sweep():
     # (label, forest_xp, cave_xp, tower_xp, boss_hp, boss_atk, xp_scale)
     variants = [
         # ── flat XP (baseline) ─────────────────────────────────────────
-        ("flat  | easy boss",    (2, 4), (5, 8), (10, 15),  50, 10, 1.0),
-        ("flat  | med  boss",    (2, 4), (5, 8), (10, 15),  78, 18, 1.0),
-        ("flat  | hard boss",    (2, 4), (5, 8), (10, 15), 110, 24, 1.0),
-        # ── mild scaling (1.3x) ────────────────────────────────────────
-        ("1.3x  | easy boss",    (2, 4), (5, 8), (10, 15),  50, 10, 1.3),
-        ("1.3x  | med  boss",    (2, 4), (5, 8), (10, 15),  78, 18, 1.3),
-        ("1.3x  | hard boss",    (2, 4), (5, 8), (10, 15), 110, 24, 1.3),
-        # ── steep scaling (1.5x) ───────────────────────────────────────
-        ("1.5x  | easy boss",    (2, 4), (5, 8), (10, 15),  50, 10, 1.5),
-        ("1.5x  | med  boss",    (2, 4), (5, 8), (10, 15),  78, 18, 1.5),
-        ("1.5x  | hard boss",    (2, 4), (5, 8), (10, 15), 110, 24, 1.5),
-        ("1.5x  | hard + fast",  (4, 6), (8,12), (15, 20), 110, 24, 1.5),
-        # ── exponential scaling (2.0x) ─────────────────────────────────
-        ("2.0x  | med  boss",    (2, 4), (5, 8), (10, 15),  78, 18, 2.0),
-        ("2.0x  | hard boss",    (2, 4), (5, 8), (10, 15), 110, 24, 2.0),
-        ("2.0x  | hard + fast",  (4, 6), (8,12), (15, 20), 110, 24, 2.0),
-        ("2.0x  | brut + fast",  (4, 6), (8,12), (15, 20), 140, 30, 2.0),
+        ("flat  | easy boss",     (2, 4), (5, 8), (10, 15),  50, 10, 1.0),
+        ("flat  | med  boss",     (2, 4), (5, 8), (10, 15),  78, 18, 1.0),
+        ("flat  | hard boss",     (2, 4), (5, 8), (10, 15), 110, 24, 1.0),
+        # ── 1.3x: fine-grained boss sweep around the sweet spot ────────
+        ("1.3x  | boss  78/18",   (2, 4), (5, 8), (10, 15),  78, 18, 1.3),
+        ("1.3x  | boss  85/19",   (2, 4), (5, 8), (10, 15),  85, 19, 1.3),
+        ("1.3x  | boss  90/20",   (2, 4), (5, 8), (10, 15),  90, 20, 1.3),
+        ("1.3x  | boss  95/21",   (2, 4), (5, 8), (10, 15),  95, 21, 1.3),
+        ("1.3x  | boss 100/22",   (2, 4), (5, 8), (10, 15), 100, 22, 1.3),
+        ("1.3x  | boss 105/23",   (2, 4), (5, 8), (10, 15), 105, 23, 1.3),
+        ("1.3x  | boss 110/24",   (2, 4), (5, 8), (10, 15), 110, 24, 1.3),
+        # ── 1.3x + fast XP: does Tower help at the hard end? ───────────
+        ("1.3x  | 90/20 fast XP", (4, 6), (8,12), (15, 20),  90, 20, 1.3),
+        ("1.3x  | 100/22 fast XP",(4, 6), (8,12), (15, 20), 100, 22, 1.3),
+        ("1.3x  | 110/24 fast XP",(4, 6), (8,12), (15, 20), 110, 24, 1.3),
+        # ── 1.5x ───────────────────────────────────────────────────────
+        ("1.5x  | boss  78/18",   (2, 4), (5, 8), (10, 15),  78, 18, 1.5),
+        ("1.5x  | boss  78/18 fast",(4,6),(8,12), (15, 20),  78, 18, 1.5),
     ]
 
     zone_names = ["Forest", "Cave", "Tower"]
-    col_w = 22; xp_w = 10; bs_w = 7; sc_w = 6; wr_w = 9; act_w = 8
+    col_w = 24; bs_w = 7; sc_w = 5; cv_w = 16; wr_w = 9; act_w = 8
 
     header = "  ".join([
         f"{'Scenario':<{col_w}}",
         f"{'BossHP':>{bs_w}}", f"{'ATK':>{bs_w}}", f"{'Scale':>{sc_w}}",
-        f"{'XP curve (lvl 1→5)':<22}",
+        f"{'XP/lvl 1-4':>{cv_w}}",
         f"{'WinRate':>{wr_w}}", f"{'Gap':>6}",
         *[f"{n:>{act_w}}" for n in zone_names],
         f"{'Heal':>{act_w}}", f"{'Boss%':>{act_w}}",
@@ -123,7 +123,7 @@ def run_sweep():
         row = "  ".join([
             f"{label:<{col_w}}",
             f"{boss_hp:>{bs_w}}", f"{boss_atk:>{bs_w}}", f"{xp_scale:>{sc_w}.1f}",
-            f"{curve:<22}",
+            f"{curve:>{cv_w}}",
             f"{win_rate:>{wr_w}.0%}", f"{gap_str:>6}",
             *[f"{usage.get(a, 0):>{act_w}.0%}" for a in range(5)],
         ])
@@ -137,9 +137,9 @@ def run_sweep():
         f"— boss HP={best[2]} ATK={best[3]} xp_scale={best[4]} ({best[1]:.0%} win rate)\n"
     )
     print("Zone usage guide:")
-    print("  Forest dominates  → leveling too easy, scale or boss too soft")
-    print("  Cave/Tower at 0%  → XP reward not worth the risk at that difficulty")
-    print("  All zones > 5%    → agent is making real trade-off decisions")
+    print("  Forest dominates    → leveling too easy, raise scale or boss difficulty")
+    print("  Cave/Tower at 0%    → XP reward not worth the risk at this difficulty")
+    print("  All zones > 5%      → agent making real trade-off decisions  ← target")
 
 
 if __name__ == "__main__":
