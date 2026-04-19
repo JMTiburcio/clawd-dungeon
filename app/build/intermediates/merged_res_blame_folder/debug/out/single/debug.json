@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "com.clawddungeon.app-merged_res-31:/layout_activity_main.xml.flat",
+        "source": "com.clawddungeon.app-main-33:/layout/activity_main.xml"
+    },
+    {
+        "merged": "/Users/joaomarcosribeirotiburcio/.gradle/daemon/8.6/com.clawddungeon.app-merged_res-31:/layout_activity_main.xml.flat",
+        "source": "/Users/joaomarcosribeirotiburcio/.gradle/daemon/8.6/com.clawddungeon.app-main-33:/layout/activity_main.xml"
+    }
+]

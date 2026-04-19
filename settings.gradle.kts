@@ -15,3 +15,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "ClawdDungeon"
 include(":app")
+include(":core")
+include(":cli")

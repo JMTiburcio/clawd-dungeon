@@ -40,9 +40,13 @@ class QLearningAgent(
         epsilon = max(epsilonMin, epsilon * epsilonDecay)
     }
 
-    fun train(episodes: Int, env: DungeonEnvironment): List<Double> {
+    fun train(
+        episodes: Int,
+        env: DungeonEnvironment,
+        callback: ((episode: Int, totalReward: Double) -> Unit)? = null,
+    ): List<Double> {
         val history = mutableListOf<Double>()
-        repeat(episodes) {
+        repeat(episodes) { ep ->
             var state = env.reset()
             var totalReward = 0.0
             var done = false
@@ -56,7 +60,32 @@ class QLearningAgent(
             }
             decayEpsilon()
             history.add(totalReward)
+            callback?.invoke(ep, totalReward)
         }
         return history
+    }
+
+    // Format: one line per Q-table entry: "hpBucket,atk,level,p0,p1,p2|q0,q1,q2,q3,q4"
+    fun save(path: String) {
+        val lines = mutableListOf("epsilon=$epsilon")
+        for ((key, values) in qTable) {
+            val keyStr = (listOf(key.hpBucket, key.atk, key.level) + key.profValues).joinToString(",")
+            lines.add("$keyStr|${values.joinToString(",")}")
+        }
+        java.io.File(path).writeText(lines.joinToString("\n"))
+    }
+
+    fun load(path: String) {
+        qTable.clear()
+        for (line in java.io.File(path).readLines()) {
+            if (line.startsWith("epsilon=")) {
+                epsilon = line.removePrefix("epsilon=").toDouble()
+            } else {
+                val (keyPart, valuesPart) = line.split("|")
+                val nums = keyPart.split(",").map { it.toInt() }
+                val key = StateKey(nums[0], nums[1], nums[2], nums.drop(3))
+                qTable[key] = valuesPart.split(",").map { it.toDouble() }.toMutableList()
+            }
+        }
     }
 }

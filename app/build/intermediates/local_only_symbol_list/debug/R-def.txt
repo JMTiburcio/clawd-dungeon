@@ -1,0 +1,24 @@
+R_DEF: Internal format may change without notice
+local
+color background
+color btn_boss
+color btn_cave
+color btn_forest
+color btn_heal
+color btn_tower
+color divider
+color surface
+color text_primary
+color text_secondary
+id btnBoss
+id btnCave
+id btnForest
+id btnHeal
+id btnRestart
+id btnTower
+id scrollLog
+id tvLog
+id tvStats
+layout activity_main
+string app_name
+style Theme.ClawdDungeon

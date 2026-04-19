@@ -16,6 +16,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnTower: Button
     private lateinit var btnHeal: Button
     private lateinit var btnBoss: Button
+    private lateinit var btnRestart: Button
 
     private val env = DungeonEnvironment()
     private var state = env.reset()
@@ -25,36 +26,28 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        tvStats   = findViewById(R.id.tvStats)
-        tvLog     = findViewById(R.id.tvLog)
-        scrollLog = findViewById(R.id.scrollLog)
-        btnForest = findViewById(R.id.btnForest)
-        btnCave   = findViewById(R.id.btnCave)
-        btnTower  = findViewById(R.id.btnTower)
-        btnHeal   = findViewById(R.id.btnHeal)
-        btnBoss   = findViewById(R.id.btnBoss)
+        tvStats    = findViewById(R.id.tvStats)
+        tvLog      = findViewById(R.id.tvLog)
+        scrollLog  = findViewById(R.id.scrollLog)
+        btnForest  = findViewById(R.id.btnForest)
+        btnCave    = findViewById(R.id.btnCave)
+        btnTower   = findViewById(R.id.btnTower)
+        btnHeal    = findViewById(R.id.btnHeal)
+        btnBoss    = findViewById(R.id.btnBoss)
+        btnRestart = findViewById(R.id.btnRestart)
 
-        btnForest.setOnClickListener { takeAction(0) }
-        btnCave.setOnClickListener   { takeAction(1) }
-        btnTower.setOnClickListener  { takeAction(2) }
-        btnHeal.setOnClickListener   { takeAction(3) }
-        btnBoss.setOnClickListener   { takeAction(4) }
+        btnForest.setOnClickListener  { takeAction(0) }
+        btnCave.setOnClickListener    { takeAction(1) }
+        btnTower.setOnClickListener   { takeAction(2) }
+        btnHeal.setOnClickListener    { takeAction(3) }
+        btnBoss.setOnClickListener    { takeAction(4) }
+        btnRestart.setOnClickListener { restartGame() }
 
         renderState()
         appendLog("Welcome to Clawd Dungeon!\nGet as strong as possible before the turn limit.")
     }
 
     private fun takeAction(action: Int) {
-        if (done) {
-            state = env.reset()
-            done = false
-            tvLog.text = ""
-            setButtonsEnabled(true)
-            renderState()
-            appendLog("─── New game ───")
-            return
-        }
-
         val result = env.step(action)
         state = result.state
         done = result.done
@@ -64,8 +57,18 @@ class MainActivity : AppCompatActivity() {
 
         if (done) {
             setButtonsEnabled(false)
-            appendLog("─── Game Over ─── Tap any button to restart.")
+            btnRestart.visibility = android.view.View.VISIBLE
         }
+    }
+
+    private fun restartGame() {
+        state = env.reset()
+        done = false
+        tvLog.text = ""
+        btnRestart.visibility = android.view.View.GONE
+        setButtonsEnabled(true)
+        renderState()
+        appendLog("─── New game ───")
     }
 
     private fun renderState() {
