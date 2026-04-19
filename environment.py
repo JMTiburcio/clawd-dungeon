@@ -51,6 +51,8 @@ class GymEnvironment:
             "player_max_hp": cfg.base_hp,
             "player_atk": cfg.base_atk,
             "player_level": 1,
+            "player_xp": 0,
+            "player_xp_required": cfg.xp_required(1),
             "boss_hp": cfg.boss_hp,
             "boss_atk": cfg.boss_atk,
         }
@@ -131,6 +133,8 @@ class GymEnvironment:
             self._xp -= xp_needed
             self._level_up(info)
 
+        self._state["player_xp"] = self._xp
+        self._state["player_xp_required"] = self.config.xp_required(self._state["player_level"])
         return 0.0
 
     def _heal(self, info: dict):

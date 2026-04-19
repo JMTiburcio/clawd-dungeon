@@ -23,18 +23,24 @@ ACTION_LABELS = {
 
 def render_state(state: dict[str, int]):
     """Displays the current state in a readable format."""
-    level = state["player_level"]
-    hp = state["player_hp"]
-    max_hp = state["player_max_hp"]
-    atk = state["player_atk"]
-    boss_hp = state["boss_hp"]
+    level    = state["player_level"]
+    hp       = state["player_hp"]
+    max_hp   = state["player_max_hp"]
+    atk      = state["player_atk"]
+    xp       = state["player_xp"]
+    xp_req   = state["player_xp_required"]
+    boss_hp  = state["boss_hp"]
     boss_atk = state["boss_atk"]
 
-    bar_filled = int(20 * hp / max_hp)
-    hp_bar = "[" + "#" * bar_filled + "." * (20 - bar_filled) + "]"
+    hp_filled = int(20 * hp / max_hp)
+    hp_bar = "[" + "#" * hp_filled + "." * (20 - hp_filled) + "]"
+
+    xp_filled = int(20 * xp / xp_req)
+    xp_bar = "[" + "*" * xp_filled + "." * (20 - xp_filled) + "]"
 
     print("\n" + "-" * 50)
     print(f"  Level {level}   HP: {hp_bar} {hp}/{max_hp}   ATK: {atk}")
+    print(f"           XP: {xp_bar} {xp}/{xp_req}")
     print(f"  Boss --- HP: {boss_hp}  ATK: {boss_atk}")
     print("-" * 50)
 
