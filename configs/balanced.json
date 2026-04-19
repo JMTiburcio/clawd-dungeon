@@ -1,0 +1,6 @@
+{
+  "boss_hp": 95,
+  "boss_atk": 21,
+  "xp_scale": 1.3,
+  "max_turns": 75
+}

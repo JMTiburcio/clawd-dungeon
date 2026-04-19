@@ -5,6 +5,7 @@ Create a GameConfig variant to test different balance scenarios without
 touching the environment logic. Pass it to GymEnvironment(config=...).
 """
 
+import json
 from dataclasses import dataclass, field
 
 
@@ -79,3 +80,28 @@ class GameConfig:
 
 
 DEFAULT_CONFIG = GameConfig()
+
+
+def load_config(path: str) -> GameConfig:
+    """
+    Loads a GameConfig from a JSON file.
+    Only the fields present in the file are overridden; everything else
+    keeps the default value. zones, if provided, fully replace the defaults.
+    """
+    with open(path) as f:
+        data = json.load(f)
+
+    zones_data = data.pop("zones", None)
+    cfg = GameConfig(**{k: v for k, v in data.items() if k != "zones"})
+
+    if zones_data:
+        cfg.zones = [
+            ZoneConfig(
+                name=z["name"],
+                xp_range=tuple(z["xp_range"]),
+                enemies=z["enemies"],
+            )
+            for z in zones_data
+        ]
+
+    return cfg

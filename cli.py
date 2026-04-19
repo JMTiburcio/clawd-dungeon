@@ -87,9 +87,9 @@ def narrate(info: dict[str, Any], state: dict[str, int]):
 # Human play loop
 # ------------------------------------------------------------------
 
-def play_human():
+def play_human(config=None):
     """Main loop for a human player."""
-    env = GymEnvironment()
+    env = GymEnvironment(config)
     state = env.reset()
     total_reward = 0.0
     turns = 0
