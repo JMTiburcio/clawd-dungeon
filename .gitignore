@@ -1,3 +1,15 @@
+# Python
 model.json
+model.bin
 __pycache__/
 *.pyc
+
+# Android / Gradle
+.gradle/
+.idea/
+app/build/
+core/build/
+cli/build/
+build/
+*.apk
+local.properties
