@@ -3,7 +3,6 @@ GymEnvironment — game core, no I/O.
 Standard gymnasium interface: reset() / step() / render()
 """
 
-import random
 from typing import Any
 
 from config import GameConfig, DEFAULT_CONFIG
@@ -101,16 +100,15 @@ class GymEnvironment:
     # ------------------------------------------------------------------
 
     def _farm(self, zone_idx: int, info: dict) -> float:
-        """Battles a random enemy in the given zone. Returns extra reward."""
+        """Battles the zone's fixed enemy. Returns extra reward."""
         zone = self.config.zones[zone_idx]
-        enemy = random.choice(zone.enemies).copy()
         player_atk = self._state["player_atk"]
-        enemy_hp = enemy["hp"]
-        enemy_atk = enemy["atk"]
+        enemy_hp = zone.enemy["hp"]
+        enemy_atk = zone.enemy["atk"]
         player_hp = self._state["player_hp"]
 
         info["zone"] = zone.name
-        info["enemy"] = enemy
+        info["enemy"] = zone.enemy
 
         while player_hp > 0 and enemy_hp > 0:
             enemy_hp -= player_atk
@@ -125,9 +123,8 @@ class GymEnvironment:
             info["boss_battle"] = False
             return self.REWARD_DEATH
 
-        xp_gained = random.randint(*zone.xp_range)
-        self._xp += xp_gained
-        info["xp_gained"] = xp_gained
+        self._xp += zone.xp
+        info["xp_gained"] = zone.xp
 
         xp_needed = self.config.xp_required(self._state["player_level"])
         if self._xp >= xp_needed:
