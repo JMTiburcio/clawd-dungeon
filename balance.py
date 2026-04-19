@@ -1,29 +1,25 @@
 """
-python balance.py — sweeps XP configurations and reports win rates + action usage.
+python balance.py — sweeps XP + boss configurations and reports win rates + action usage.
 
-For each config variant, trains a fresh agent and evaluates:
-  - Win rate (did the agent defeat the boss?)
-  - Action usage breakdown (which zones/actions were actually used?)
-
-A balanced config should show all zones being used and a win rate near the target.
-An unused zone signals either a redundant feature or a balance problem.
+Each scenario varies XP progression across zones AND boss difficulty.
+Goal: find configs where win rate ≈ 50% and all zones are actually used.
 """
 
 import copy
 from collections import defaultdict
 
 from agent import QLearningAgent
-from config import GameConfig, ZoneConfig
+from config import GameConfig
 from environment import GymEnvironment
 
-TRAIN_EPISODES = 3000
-EVAL_EPISODES  = 300
+TRAIN_EPISODES  = 3000
+EVAL_EPISODES   = 300
 TARGET_WIN_RATE = 0.50
-MAX_TURNS = 50
+MAX_TURNS       = 50
 
 
-def _make_config(forest_xp, cave_xp, tower_xp) -> GameConfig:
-    cfg = GameConfig(max_turns=MAX_TURNS)
+def _make_config(forest_xp, cave_xp, tower_xp, boss_hp, boss_atk) -> GameConfig:
+    cfg = GameConfig(max_turns=MAX_TURNS, boss_hp=boss_hp, boss_atk=boss_atk)
     cfg.zones = copy.deepcopy(cfg.zones)
     cfg.zones[0].xp_range = forest_xp
     cfg.zones[1].xp_range = cave_xp
@@ -34,8 +30,7 @@ def _make_config(forest_xp, cave_xp, tower_xp) -> GameConfig:
 def evaluate(agent: QLearningAgent, config: GameConfig, episodes: int) -> tuple[float, dict]:
     """
     Runs the agent greedily for N episodes.
-    Returns (win_rate, action_usage_pct) where action_usage_pct maps
-    action index → percentage of total actions taken.
+    Returns (win_rate, action_usage_pct).
     """
     wins = 0
     action_counts: dict[int, int] = defaultdict(int)
@@ -53,80 +48,90 @@ def evaluate(agent: QLearningAgent, config: GameConfig, episodes: int) -> tuple[
         if info.get("won"):
             wins += 1
 
-    usage = {a: action_counts[a] / total_actions for a in range(config.max_turns and 5 or 5)}
+    usage = {a: action_counts[a] / total_actions for a in range(5)}
     return wins / episodes, usage
 
 
 def run_sweep():
-    # (label, forest_xp, cave_xp, tower_xp)
+    # (label, forest_xp, cave_xp, tower_xp, boss_hp, boss_atk)
     variants = [
-        ("flat (equal XP)",    (4, 6),  (4, 6),   (4, 6)),
-        ("slow progression",   (1, 2),  (3, 5),   (6, 10)),
-        ("default",            (2, 4),  (5, 8),   (10, 15)),
-        ("fast progression",   (4, 6),  (8, 12),  (15, 20)),
-        ("forest-heavy",       (6, 10), (4, 6),   (4, 6)),
-        ("tower-heavy",        (1, 2),  (2, 4),   (15, 25)),
+        # ── easy boss ──────────────────────────────────────────────────
+        ("easy  | slow XP",      (1, 2),  (3, 5),  (6, 10),  50, 10),
+        ("easy  | default XP",   (2, 4),  (5, 8),  (10, 15), 50, 10),
+        ("easy  | fast XP",      (4, 6),  (8, 12), (15, 20), 50, 10),
+        # ── medium boss (current) ──────────────────────────────────────
+        ("med   | slow XP",      (1, 2),  (3, 5),  (6, 10),  78, 18),
+        ("med   | default XP",   (2, 4),  (5, 8),  (10, 15), 78, 18),
+        ("med   | fast XP",      (4, 6),  (8, 12), (15, 20), 78, 18),
+        # ── hard boss ──────────────────────────────────────────────────
+        ("hard  | slow XP",      (1, 2),  (3, 5),  (6, 10),  110, 24),
+        ("hard  | default XP",   (2, 4),  (5, 8),  (10, 15), 110, 24),
+        ("hard  | fast XP",      (4, 6),  (8, 12), (15, 20), 110, 24),
+        ("hard  | tower-heavy",  (1, 2),  (3, 5),  (15, 25), 110, 24),
+        # ── brutal boss ────────────────────────────────────────────────
+        ("brut  | default XP",   (2, 4),  (5, 8),  (10, 15), 140, 30),
+        ("brut  | fast XP",      (4, 6),  (8, 12), (15, 20), 140, 30),
+        ("brut  | tower-heavy",  (1, 2),  (3, 5),  (15, 25), 140, 30),
     ]
 
-    n_zones = 3
     zone_names = ["Forest", "Cave", "Tower"]
 
-    # Build header
-    col_w = 22
-    xp_w  = 11
-    wr_w  = 9
-    act_w = 8
+    col_w  = 22
+    xp_w   = 10
+    bs_w   = 8
+    wr_w   = 9
+    act_w  = 8
 
-    header_parts = [f"{'Config':<{col_w}}"]
-    for n in zone_names:
-        header_parts.append(f"{n+' XP':<{xp_w}}")
-    header_parts.append(f"{'WinRate':>{wr_w}}")
-    header_parts.append(f"{'Gap':>6}")
-    for n in zone_names:
-        header_parts.append(f"{n:>{act_w}}")
-    header_parts.append(f"{'Heal':>{act_w}}")
-    header_parts.append(f"{'Boss':>{act_w}}")
-
+    header_parts = (
+        [f"{'Scenario':<{col_w}}"]
+        + [f"{'BossHP':>{bs_w}}", f"{'BossATK':>{bs_w}}"]
+        + [f"{n+' XP':<{xp_w}}" for n in zone_names]
+        + [f"{'WinRate':>{wr_w}}", f"{'Gap':>6}"]
+        + [f"{n:>{act_w}}" for n in zone_names]
+        + [f"{'Heal':>{act_w}}", f"{'Boss%':>{act_w}}"]
+    )
     header = "  ".join(header_parts)
-    sep = "=" * len(header)
+    sep    = "=" * len(header)
 
     print(f"\n{sep}")
     print(header)
     print(sep)
 
     results = []
+    prev_boss = None
 
-    for label, forest_xp, cave_xp, tower_xp in variants:
-        config = _make_config(forest_xp, cave_xp, tower_xp)
+    for label, f_xp, c_xp, t_xp, boss_hp, boss_atk in variants:
+        # Visual separator between boss tiers
+        if prev_boss is not None and boss_hp != prev_boss:
+            print("-" * len(header))
+        prev_boss = boss_hp
 
-        agent = QLearningAgent()
+        config = _make_config(f_xp, c_xp, t_xp, boss_hp, boss_atk)
+        agent  = QLearningAgent()
         agent.train(episodes=TRAIN_EPISODES, env=GymEnvironment(config))
         win_rate, usage = evaluate(agent, config, EVAL_EPISODES)
 
-        gap = win_rate - TARGET_WIN_RATE
+        gap     = win_rate - TARGET_WIN_RATE
         gap_str = f"{gap:+.0%}"
 
-        row_parts = [f"{label:<{col_w}}"]
-        for xp in (forest_xp, cave_xp, tower_xp):
-            row_parts.append(f"{xp[0]}-{xp[1]:<{xp_w-3}}")
-        row_parts.append(f"{win_rate:>{wr_w}.0%}")
-        row_parts.append(f"{gap_str:>6}")
-        # action 0=forest, 1=cave, 2=tower, 3=heal, 4=boss
-        for a in range(n_zones + 2):
-            pct = usage.get(a, 0.0)
-            row_parts.append(f"{pct:>{act_w}.0%}")
-
-        print("  ".join(row_parts))
-        results.append((label, win_rate))
+        row = (
+            [f"{label:<{col_w}}"]
+            + [f"{boss_hp:>{bs_w}}", f"{boss_atk:>{bs_w}}"]
+            + [f"{xp[0]}-{xp[1]:<{xp_w-3}}" for xp in (f_xp, c_xp, t_xp)]
+            + [f"{win_rate:>{wr_w}.0%}", f"{gap_str:>6}"]
+            + [f"{usage.get(a, 0):>{act_w}.0%}" for a in range(5)]
+        )
+        print("  ".join(row))
+        results.append((label, win_rate, boss_hp, boss_atk))
 
     print(sep)
     best = min(results, key=lambda x: abs(x[1] - TARGET_WIN_RATE))
-    print(f"\nClosest to {TARGET_WIN_RATE:.0%} target: '{best[0]}' ({best[1]:.0%})\n")
+    print(f"\nClosest to {TARGET_WIN_RATE:.0%} target: '{best[0]}' — boss HP={best[2]} ATK={best[3]} ({best[1]:.0%} win rate)\n")
 
     print("Action usage guide:")
-    print("  0%  on a zone = the agent never farms there → redundant or too risky/slow")
-    print("  High Boss% = agent challenges boss early → may be too easy")
-    print("  High Heal% = agent heals a lot → combat too punishing")
+    print("  0% on a zone   → redundant or too risky/slow for the current boss")
+    print("  High Boss%     → agent rushes boss early → may be too easy")
+    print("  High Heal%     → combat too punishing")
 
 
 if __name__ == "__main__":
