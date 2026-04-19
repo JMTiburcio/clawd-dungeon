@@ -1,0 +1,70 @@
+"""
+GameConfig — all tunable game parameters in one place.
+
+Create a GameConfig variant to test different balance scenarios without
+touching the environment logic. Pass it to GymEnvironment(config=...).
+"""
+
+from dataclasses import dataclass, field
+
+
+@dataclass
+class ZoneConfig:
+    name: str
+    xp_range: tuple[int, int]   # (min, max) XP awarded per victory
+    enemies: list[dict]         # each dict: {"hp": int, "atk": int}
+
+
+@dataclass
+class GameConfig:
+    # Boss
+    boss_hp: int = 78
+    boss_atk: int = 18
+
+    # Player starting stats
+    base_hp: int = 20
+    base_atk: int = 5
+
+    # Stat gain per level-up
+    level_hp_gain: int = 8
+    level_atk_gain: int = 2
+
+    # XP required to level up
+    xp_to_level: int = 10
+
+    # Farm zones (order defines action indices 0..N-1)
+    zones: list[ZoneConfig] = field(default_factory=lambda: [
+        ZoneConfig(
+            name="Forest",
+            xp_range=(2, 4),
+            enemies=[
+                {"hp": 10, "atk": 3},
+                {"hp": 12, "atk": 3},
+                {"hp": 15, "atk": 4},
+                {"hp": 18, "atk": 4},
+            ],
+        ),
+        ZoneConfig(
+            name="Cave",
+            xp_range=(5, 8),
+            enemies=[
+                {"hp": 22, "atk": 6},
+                {"hp": 28, "atk": 7},
+                {"hp": 32, "atk": 8},
+                {"hp": 36, "atk": 9},
+            ],
+        ),
+        ZoneConfig(
+            name="Tower",
+            xp_range=(10, 15),
+            enemies=[
+                {"hp": 38, "atk": 10},
+                {"hp": 44, "atk": 11},
+                {"hp": 48, "atk": 12},
+                {"hp": 52, "atk": 13},
+            ],
+        ),
+    ])
+
+
+DEFAULT_CONFIG = GameConfig()

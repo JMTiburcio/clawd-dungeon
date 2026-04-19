@@ -75,12 +75,14 @@ class QLearningAgent:
         """Reduces exploration rate after each episode."""
         self.epsilon = max(self.epsilon_min, self.epsilon * self.epsilon_decay)
 
-    def train(self, episodes: int = 5000, callback=None) -> list[float]:
+    def train(self, episodes: int = 5000, callback=None, env=None) -> list[float]:
         """
         Trains for N episodes. Returns list of total rewards per episode.
         callback(episode, total_reward, info) — optional, for external logging.
+        env — optional GymEnvironment instance; creates a default one if not provided.
         """
-        env = GymEnvironment()
+        if env is None:
+            env = GymEnvironment()
         rewards_history = []
 
         for ep in range(episodes):
