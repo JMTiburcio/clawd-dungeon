@@ -10,7 +10,7 @@ from config import GameConfig, DEFAULT_CONFIG
 
 class GymEnvironment:
     """
-    RL environment inspired by the first Pokémon gym.
+    Classic turn-based dungeon RPG environment for RL.
 
     Actions are derived from the config:
         0..N-1  — farm in each zone (defined by config.zones)

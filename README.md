@@ -1,6 +1,6 @@
 # clawd-dungeon
 
-A Pokémon-inspired RL environment for training and balancing a gym speedrun agent.
+A classic turn-based dungeon RPG environment for training and balancing an RL agent.
 
 The core idea: train a Q-Learning agent to defeat the Boss as fast as possible, learning the optimal trade-off between farming zones, healing, and challenging the Boss. The same environment doubles as a **balance testing tool** — sweeping configs exposes which features the agent actually uses.
 
